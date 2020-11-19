@@ -820,16 +820,22 @@ class Commands:
         return wallet.get_unused_address()
 
     @command('w')
-    async def add_request(self, amount, memo='', expiration=3600, force=False, wallet: Abstract_Wallet = None):
+    async def add_request(self, amount, memo='', expiration=3600, force=False, address=None, wallet: Abstract_Wallet = None):
         """Create a payment request, using the first unused address of the wallet.
         The address will be considered as used after this operation.
         If no payment is received, the address will be considered as unused if the payment request is deleted from the wallet."""
-        addr = wallet.get_unused_address()
-        if addr is None:
-            if force:
-                addr = wallet.create_new_address(False)
+        if not address:
+            addr = wallet.get_unused_address()
+            if addr is None:
+                if force:
+                    addr = wallet.create_new_address(False)
+                else:
+                    return False
+        else:
+            if address in wallet.get_unused_addresses():
+                addr = address
             else:
-                return False
+                raise Exception("This address is already in use")
         amount = satoshis(amount)
         expiration = int(expiration) if expiration else None
         req = wallet.make_payment_request(addr, amount, memo, expiration)
@@ -1171,6 +1177,7 @@ param_descriptions = {
 }
 
 command_options = {
+    'address':     (None, "Address"),
     'password':    ("-W", "Password"),
     'new_password':(None, "New Password"),
     'encrypt_file':(None, "Whether the file on disk should be encrypted with the provided password"),
